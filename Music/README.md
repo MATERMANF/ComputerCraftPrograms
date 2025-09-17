@@ -11,10 +11,10 @@ The NBS Wrapper creates a NBS object with the following format:
 {
   objects:
   info = {}        table containing all the file's header info
-  file =           the lua file object of the cached .nbs file
-  filePath =       the path to the open cached .nbs file
-  currentNotePos = the offset of the file to the start of the next note
-  nextTick =       how many ticks until the next note (the currently loaded note) should be played
+  file             the lua file object of the cached .nbs file
+  filePath         the path to the open cached .nbs file
+  currentNotePos   the offset of the file to the start of the next note
+  nextTick         how many ticks until the next note (the currently loaded note) should be played
   nextNotes = {}   table containing all layers in the song, and the note that is to be played next
 
   functions:
