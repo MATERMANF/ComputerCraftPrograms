@@ -55,48 +55,78 @@ function loadNBS(filePath)
     -- Keep track of where in the file we should read notes from
     -- just in case someone decides to access the file object improperly
     obj.currentNotePos = obj.info.songStartByte
+    obj.loopCount = 0    -- Number of times we've looped
+    obj.nextTick = -1    -- What tick the upcoming notes should be played
 
-    obj.nextTick = -1
-
-    obj.nextNotes = {}
+    obj.nextNotes = {}    -- Table to store upcoming notes
 
     -- Create instance function that will load the next tick of notes for the song
-
+    -- Returns false if end of song is reached, or true if notes were loaded into self.nextNotes
     function obj:loadNextNotes()
-        
-        -- Ensure we're reading the file at the start of the next note
-        self.file.seek("set",self.currentNotePos)
-        -- Read note block header info
-        self.nextTick = self.nextTick + readShort(self.file)
-        -- Read note blocks by layer
-        -- Note, NBS documentation shows start at -1 with first index at 0, 
-        --  but lua indexing starts at 1 so starting at 0 instead
-        layer = 0
-        notes = {}
-
-        for i = 1, self.info.layerCount do
-            notes[i] = nil
-        end
-        -- Figure out which layer to start at
-        layerJump = readShort(self.file)
-        while layerJump ~= 0 and layer < self.info.layerCount do
-            layer = layer + layerJump
-            notes[layer] = {
-                instrument=readByte(self.file),
-                key=readByte(self.file),
-                velocity=readByte(self.file),
-                panning=readByte(self.file),
-                pitch=readShort(self.file)
-            }
-            layerJump = readShort(self.file)
-        end
-
-        self.nextNotes = notes
-        self.currentNotePos = self.file.seek()
+        if self.nextTick >= self.info.songLength then
+            ----- Normal read logic
+            
+            -- Ensure we're reading the file at the start of the next note
+            self.file.seek("set",self.currentNotePos)
+            -- Read note block header info
+            self.nextTick = self.nextTick + readShort(self.file)
     
+            ------- Logic for handling finding the loop notes and marking them for later
+            if self.nextTick > self.info.songLength - self.info.songLoopStart then
+                self.loopTick = self.nextTick
+                self.loopStartByte = self.file.seek() - 2    -- Offset by 2 for the short that was read earlier
+            end
+            
+            -- Read note blocks by layer
+            -- Note, NBS documentation shows start at -1 with first index at 0, 
+            --  but lua indexing starts at 1 so starting at 0 instead
+            layer = 0
+            notes = {}
+    
+            for i = 1, self.info.layerCount do
+                notes[i] = nil
+            end
+            -- Figure out which layer to start at
+            layerJump = readShort(self.file)
+            while layerJump ~= 0 and layer < self.info.layerCount do
+                layer = layer + layerJump
+                notes[layer] = {
+                    instrument=readByte(self.file),
+                    key=readByte(self.file),
+                    velocity=readByte(self.file),
+                    panning=readByte(self.file),
+                    pitch=readShort(self.file)
+                }
+                layerJump = readShort(self.file)
+            end
+    
+            self.nextNotes = notes
+            self.currentNotePos = self.file.seek()
+
+        else
+            if self.info.songLoop and (self.info.songLoopTimes == 0 or self.loopCount < self.info.songLoopTimes) then
+            ----- Loop Event logic (executed when we reach end of song but looping is enabled)
+                -- note, songLoopTimes == 0 means infinite looping
+                
+                -- Set file location to start of next note where loop begins
+                self.file.seek(self.info.loopStartByte)
+                self.loopCount += 1
+                self:nextNotes()
+                -- Adds additional tick buffer incase loop is starting between notes
+                self.nextTick = self.nextTick + self.info.songLoopStart - self.loopTick
+            else
+                -- Set nextNotes to nil, incase a false signal isn't handeled properly
+                -- Just turns off all notes lol
+                for i = 1, self.info.layerCount do
+                    self.nextNotes[i] = nil
+                end
+                return false
+            end
+        end
+        return true
     end
 
-    
+    -- Instance function to close and remove cached file, and render NBS object unusable
     function obj:unloadNBT()
         
         self.file.close()
