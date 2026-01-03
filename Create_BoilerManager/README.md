@@ -5,6 +5,7 @@
 
 This serves as a simple boiler manager and controller for boilers using the Create mod
 Handles starting and stopping the boiler, monitoring, enabling/disabling output, as well as has a built-in watchdog.
+When the program starts (from computer power off or otherwise), will automatically detect the on/off state of the boiler, as well as the output state (if the boiler is running)
 This was designed to be modular to many different engine types, but only the boiler is configured. Also, touchscreen controls have only been implemented for one boiler. Tough luck, might fix later.
 Assumes it is connected to an advanced monitor
 
@@ -24,6 +25,11 @@ The reason I say "restore" is you may not want your boiler output to be enabled 
 - The right side of the monitor's touch screen toggles the boiler's output on or off.
 > If the output is toggled off while the boiler is starting, the boiler will not automatically enable the output.
 
-Will display the total stress used and provided to the attached SU network, as well as the estimated maximum stress of all configured boilers 
+> [!NOTE]
+> When the boiler is turned off, the output is also automatically disabled to prevent the SU network backfeeding power into it
+
+## Display
+Will display the total stress used and provided to the attached SU network, as well as the estimated maximum stress of all configured boilers.
+Will also display the numerical count for how many boilers are actually on as compared to how many are configured. The intent is that at a future date it will automatically enable additional boilers as consumed stress approaches the max currently available, but this is not possible at the moment.
 > [!WARNING]
-> note, again, only fully supports for one boiler. This is a limitation of the touchscreen code, as there is no way to turn on a second attached boiler, though it may be configured. Might get fixed in the future
+> note, again, only fully supports for one boiler. This is a limitation of the touchscreen code (and watchdog code due to wanting a rough working version), as there is no way to turn on a second attached boiler, though it may be configured. Might get fixed in the future
